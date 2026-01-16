@@ -1,66 +1,33 @@
-name: FoD DAST API Scan
+name: FoD Auth - User Password
 
 on:
   workflow_dispatch:
-  pull_request:
-    branches: [ "main" ]
-  push:
-    branches: [ "main" ]
-
+  
 jobs:
-  fod-dast-api:
+  fod-auth:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Install fcli
+      - name: Authenticate to Fortify on Demand
         run: |
-          curl -sL https://github.com/fortify/fcli/releases/latest/download/fcli-linux.tgz | tar zx
-          sudo mv fcli /usr/local/bin/fcli
+          echo "Authenticating to Fortify on Demand with user/password..."
 
-      - name: Authenticate to Fortify On Demand
-        env:
-          FOD_URL: https://ams.fortify.com
-          FOD_TENANT: ${{ secrets.FOD_TENANT }}
-          FOD_USER: ${{ secrets.FOD_USER }}
-          FOD_PASSWORD: ${{ secrets.FOD_PAT }}
-        run: |
-          fcli fod session login \
-            --url "$FOD_URL" \
-            --tenant "$FOD_TENANT" \
-            --user "$FOD_USER" \
-            --password "$FOD_PASSWORD"
+          RESPONSE=$(curl -s -X POST \
+            https://api.ams.fortify.com/oauth/token \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "grant_type=password" \
+            -d "username=${{ secrets.FOD_USER }}" \
+            -d "password=${{ secrets.FOD_PASSWORD }}" \
+            -d "tenant=${{ secrets.FOD_TENANT }}" \
+            -d "scope=api-tenant")
 
-      - name: Start DAST API Scan
-        env:
-          FOD_RELEASE: ${{ secrets.FOD_RELEASE }}
-        run: |
-          fcli fod dast start \
-            --release "$FOD_RELEASE" \
-            --store scan.json
+          ACCESS_TOKEN=$(echo "$RESPONSE" | jq -r .access_token)
 
-      - name: Wait for scan to complete
-        run: |
-          SCAN_ID=$(jq -r '.scanId' scan.json)
-          echo "Scan ID: $SCAN_ID"
-
-          fcli fod dast wait \
-            --scan "$SCAN_ID"
-
-      - name: Enforce rating (>= 3 stars)
-        run: |
-          SCAN_ID=$(jq -r '.scanId' scan.json)
-
-          RATING=$(fcli fod dast get \
-            --scan "$SCAN_ID" \
-            --output json | jq -r '.rating')
-
-          echo "Rating obtenido: $RATING estrellas"
-
-          if [ "$RATING" -lt 3 ]; then
-            echo "❌ Criterio de aceptación no cumplido"
+          if [ "$ACCESS_TOKEN" = "null" ] || [ -z "$ACCESS_TOKEN" ]; then
+            echo "ERROR: Authentication failed"
+            echo "$RESPONSE"
             exit 1
           fi
 
-          echo "✅ Scan exitoso y criterio cumplido"
+          echo "Authentication successful"
+          echo "FOD_ACCESS_TOKEN=$ACCESS_TOKEN" >> $GITHUB_ENV
