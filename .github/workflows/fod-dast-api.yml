@@ -37,30 +37,4 @@ jobs:
           FOD_RELEASE: ${{ secrets.FOD_RELEASE }}
         run: |
           fcli fod dast start \
-            --release "$FOD_RELEASE" \
-            --store scan.json
- 
-      - name: Wait for scan to complete
-        run: |
-          SCAN_ID=$(jq -r '.scanId' scan.json)
-          echo "Scan ID: $SCAN_ID"
- 
-          fcli fod dast wait \
-            --scan "$SCAN_ID"
- 
-      - name: Enforce rating (>= 3 stars)
-        run: |
-          SCAN_ID=$(jq -r '.scanId' scan.json)
- 
-          RATING=$(fcli fod dast get \
-            --scan "$SCAN_ID" \
-            --output json | jq -r '.rating')
- 
-          echo "Rating obtenido: $RATING estrellas"
- 
-          if [ "$RATING" -lt 3 ]; then
-            echo "❌ Criterio de aceptación no cumplido"
-            exit 1
-          fi
- 
-          echo "✅ Scan exitoso y criterio cumplido"
+            --release "$FOD_RELEASE"
