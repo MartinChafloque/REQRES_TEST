@@ -8,8 +8,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout (empty repo is OK)
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Install fcli
         run: |
@@ -18,13 +17,11 @@ jobs:
 
       - name: Authenticate to Fortify On Demand
         env:
-          FOD_URL: https://ams.fortify.com
           FOD_TENANT: ${{ secrets.FOD_TENANT }}
-          FOD_USER: ${{ secrets.FOD_USER }}
-          FOD_PASSWORD: ${{ secrets.FOD_PAT }}
+          FOD_CLIENT_ID: ${{ secrets.FOD_CLIENT_ID }}
+          FOD_CLIENT_SECRET: ${{ secrets.FOD_CLIENT_SECRET }}
         run: |
           fcli fod session login \
-            --url "https://ams.fortify.com" \
             --tenant "$FOD_TENANT" \
-            --user "$FOD_USER" \
-            --password "$FOD_PASSWORD"
+            --client-id "$FOD_CLIENT_ID" \
+            --client-secret "$FOD_CLIENT_SECRET"
