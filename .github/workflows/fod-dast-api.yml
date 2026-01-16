@@ -1,25 +1,25 @@
-name: FoD Dynamic API Assessment (Subscription)
-
+name: FoD DAST API Scan
+ 
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [ "main" ]
   push:
-    branches:
-      - main
-
+    branches: [ "main" ]
+ 
 jobs:
-  fod-dynamic-api-scan:
+  fod-dast-api:
     runs-on: ubuntu-latest
-
+ 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
+ 
       - name: Install fcli
         run: |
           curl -sL https://github.com/fortify/fcli/releases/latest/download/fcli-linux.tgz | tar zx
           sudo mv fcli /usr/local/bin/fcli
-
-      - name: Login to Fortify On Demand
+ 
+      - name: Authenticate to Fortify On Demand
         env:
           FOD_URL: https://ams.fortify.com
           FOD_TENANT: ${{ secrets.FOD_TENANT }}
@@ -31,3 +31,36 @@ jobs:
             --tenant "$FOD_TENANT" \
             --user "$FOD_USER" \
             --password "$FOD_PASSWORD"
+ 
+      - name: Start DAST API Scan
+        env:
+          FOD_RELEASE: ${{ secrets.FOD_RELEASE }}
+        run: |
+          fcli fod dast start \
+            --release "$FOD_RELEASE" \
+            --store scan.json
+ 
+      - name: Wait for scan to complete
+        run: |
+          SCAN_ID=$(jq -r '.scanId' scan.json)
+          echo "Scan ID: $SCAN_ID"
+ 
+          fcli fod dast wait \
+            --scan "$SCAN_ID"
+ 
+      - name: Enforce rating (>= 3 stars)
+        run: |
+          SCAN_ID=$(jq -r '.scanId' scan.json)
+ 
+          RATING=$(fcli fod dast get \
+            --scan "$SCAN_ID" \
+            --output json | jq -r '.rating')
+ 
+          echo "Rating obtenido: $RATING estrellas"
+ 
+          if [ "$RATING" -lt 3 ]; then
+            echo "❌ Criterio de aceptación no cumplido"
+            exit 1
+          fi
+ 
+          echo "✅ Scan exitoso y criterio cumplido"
