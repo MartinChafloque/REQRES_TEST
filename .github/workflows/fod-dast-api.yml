@@ -19,11 +19,11 @@ jobs:
         env:
           FOD_URL: https://ams.fortify.com
           FOD_TENANT: ${{ secrets.FOD_TENANT }}
-          FOD_CLIENT_ID: ${{ secrets.FOD_CLIENT_ID }}
-          FOD_CLIENT_SECRET: ${{ secrets.FOD_CLIENT_SECRET }}
+          FOD_USER: ${{secrets.FOD_USER}}
+          FOD_PASSWORD: ${{secrets.FOD_PAT}}
         run: |
           fcli fod session login \
             --url "$FOD_URL" \
             --tenant "$FOD_TENANT" \
-            --client-id "$FOD_CLIENT_ID" \
-            --client-secret "$FOD_CLIENT_SECRET"
+            --user "$FOD_USER" \
+            --password "$FOD_PASSWORD"
