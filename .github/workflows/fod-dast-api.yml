@@ -17,11 +17,13 @@ jobs:
 
       - name: Authenticate to Fortify On Demand
         env:
+          FOD_URL: https://ams.fortify.com
           FOD_TENANT: ${{ secrets.FOD_TENANT }}
           FOD_CLIENT_ID: ${{ secrets.FOD_CLIENT_ID }}
           FOD_CLIENT_SECRET: ${{ secrets.FOD_CLIENT_SECRET }}
         run: |
           fcli fod session login \
+            --url "$FOD_URL" \
             --tenant "$FOD_TENANT" \
             --client-id "$FOD_CLIENT_ID" \
             --client-secret "$FOD_CLIENT_SECRET"
