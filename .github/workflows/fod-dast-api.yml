@@ -1,33 +1,41 @@
-name: FoD Auth - User Password
+name: FoD Dynamic API Scan (Automated)
 
 on:
   workflow_dispatch:
-  
+  push:
+    branches:
+      - main
+
 jobs:
-  fod-auth:
+  fod-dynamic-api-scan:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Authenticate to Fortify on Demand
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install fcli
         run: |
-          echo "Authenticating to Fortify on Demand with user/password..."
+          curl -sL https://github.com/fortify/fcli/releases/latest/download/fcli-linux.tgz | tar zx
+          sudo mv fcli /usr/local/bin/fcli
 
-          RESPONSE=$(curl -s -X POST \
-            https://api.ams.fortify.com/oauth/token \
-            -H "Content-Type: application/x-www-form-urlencoded" \
-            -d "grant_type=password" \
-            -d "username=${{ secrets.FOD_USER }}" \
-            -d "password=${{ secrets.FOD_PASSWORD }}" \
-            -d "tenant=${{ secrets.FOD_TENANT }}" \
-            -d "scope=api-tenant")
+      - name: Authenticate to Fortify On Demand
+        env:
+          FOD_URL: https://ams.fortify.com
+          FOD_TENANT: ${{ secrets.FOD_TENANT }}
+          FOD_USER: ${{ secrets.FOD_USER }}
+          FOD_PASSWORD: ${{ secrets.FOD_PASSWORD }}
+        run: |
+          echo "Logging into Fortify On Demand..."
+          fcli fod session login \
+            --url "$FOD_URL" \
+            --tenant "$FOD_TENANT" \
+            --user "$FOD_USER" \
+            --password "$FOD_PASSWORD"
 
-          ACCESS_TOKEN=$(echo "$RESPONSE" | jq -r .access_token)
-
-          if [ "$ACCESS_TOKEN" = "null" ] || [ -z "$ACCESS_TOKEN" ]; then
-            echo "ERROR: Authentication failed"
-            echo "$RESPONSE"
-            exit 1
-          fi
-
-          echo "Authentication successful"
-          echo "FOD_ACCESS_TOKEN=$ACCESS_TOKEN" >> $GITHUB_ENV
+      - name: Start Dynamic API Scan
+        run: |
+          echo "Starting Dynamic API Scan for release 1696044..."
+          fcli fod rest call \
+            /api/v3/releases/1696044/dynamic-scans/start-scan \
+            -X POST
