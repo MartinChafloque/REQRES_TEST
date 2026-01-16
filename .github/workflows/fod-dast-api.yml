@@ -1,0 +1,30 @@
+name: FoD DAST API - Auth Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fod-auth:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (empty repo is OK)
+        uses: actions/checkout@v4
+
+      - name: Install fcli
+        run: |
+          curl -sL https://github.com/fortify/fcli/releases/latest/download/fcli-linux.tgz | tar zx
+          sudo mv fcli /usr/local/bin/fcli
+
+      - name: Authenticate to Fortify On Demand
+        env:
+          FOD_URL: https://ams.fortify.com
+          FOD_TENANT: ${{ secrets.FOD_TENANT }}
+          FOD_USER: ${{ secrets.FOD_USER }}
+          FOD_PASSWORD: ${{ secrets.FOD_PAT }}
+        run: |
+          fcli fod session login \
+            --url "https://ams.fortify.com" \
+            --tenant "$FOD_TENANT" \
+            --user "$FOD_USER" \
+            --password "$FOD_PASSWORD"
